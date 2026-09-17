@@ -143,6 +143,16 @@ select{appearance:none; -webkit-appearance:none;}
 .color-row{display:flex; align-items:center; gap:10px;}
 .color-row input[type=color]{width:44px; height:36px; border:none; border-radius:8px; padding:0; background:none;}
 .color-row .auto-tag{font-size:11.5px; opacity:0.55;}
+.color-row #hexInput{
+  border:1px solid var(--line); background:transparent; color:var(--ink);
+  padding:9px 10px; border-radius:8px; font-family:'Inter',sans-serif; font-size:13px; text-transform:uppercase;
+}
+.preset-swatches{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px;}
+.preset-swatches .sw{
+  width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid rgba(0,0,0,0.12);
+  flex-shrink:0;
+}
+.preset-swatches .sw.active{outline:2px solid var(--teal); outline-offset:2px;}
 .photo-btn-row{display:flex; gap:8px; margin-top:8px;}
 .photo-btn{
   flex:1; background:var(--teal); color:#eaf3f1; border:none; border-radius:8px;
@@ -264,7 +274,7 @@ select{appearance:none; -webkit-appearance:none;}
 <!-- Add item modal -->
 <div class="modal-backdrop" id="addModal">
   <div class="modal">
-    <h3>Nueva prenda</h3>
+    <h3 id="modalTitle">Nueva prenda</h3>
     <div class="field">
       <label>Foto</label>
       <div class="photo-drop" id="photoPreviewBox">
@@ -322,12 +332,15 @@ select{appearance:none; -webkit-appearance:none;}
     </div>
     <div class="field">
       <label>Color dominante</label>
+      <div class="preset-swatches" id="presetSwatches"></div>
       <div class="color-row">
         <input type="color" id="colorInput" value="#888888">
+        <input type="text" id="hexInput" placeholder="#RRGGBB" maxlength="7" style="width:90px;">
         <span class="auto-tag" id="autoTag">sube una foto para detectarlo</span>
       </div>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-danger" id="deleteItemBtn" style="display:none;">Eliminar</button>
       <button class="btn btn-ghost" id="cancelAdd">Cancelar</button>
       <button class="btn btn-primary" id="saveAdd">Guardar prenda</button>
     </div>
@@ -376,6 +389,7 @@ function dbAll(){
 let items=[];
 let currentPhotoData=null;
 let autoDetectedColor=null;
+let editingId=null;
 
 const CAT_LABELS={top:'Top',bottom:'Bottom',dress:'Vestido',outerwear:'Abrigo',shoes:'Calzado',accessory:'Accesorio'};
 const FORMALITY_LABELS={1:'deportivo',2:'casual',3:'business casual',4:'formal'};
@@ -555,17 +569,74 @@ function extractDominantColor(imgEl){
 
 /* ---------- Add item modal ---------- */
 const addModal=document.getElementById('addModal');
-document.getElementById('openAdd').addEventListener('click',()=>{
+const PRESET_COLORS=['#B3282D','#D2691E','#E8C547','#2E7D4F','#0F6E4E','#2F6FB3','#1E4FA3','#1F2A44','#6A3E9C','#C8A2C8','#E8A0BF','#6E1E2E','#C19A6B','#D2B48C','#6B4226','#6B6B2A','#4F6D8C','#1A1A1A','#8C8C8C','#F5F5F0'];
+function renderPresetSwatches(){
+  const box=document.getElementById('presetSwatches');
+  box.innerHTML=PRESET_COLORS.map(c=>`<div class="sw" data-c="${c}" style="background:${c}"></div>`).join('');
+  box.querySelectorAll('.sw').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      const c=sw.dataset.c;
+      document.getElementById('colorInput').value=c;
+      document.getElementById('hexInput').value=c;
+      document.getElementById('autoTag').textContent='color elegido manualmente';
+      box.querySelectorAll('.sw').forEach(s=>s.classList.remove('active'));
+      sw.classList.add('active');
+    });
+  });
+}
+document.getElementById('colorInput').addEventListener('input',e=>{
+  document.getElementById('hexInput').value=e.target.value;
+});
+document.getElementById('hexInput').addEventListener('change',e=>{
+  let v=e.target.value.trim();
+  if(!v.startsWith('#')) v='#'+v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){
+    document.getElementById('colorInput').value=v;
+  } else {
+    alert('Escribe un color en formato hex, ej. #A8532F');
+  }
+});
+
+function openModalForAdd(){
+  editingId=null;
   currentPhotoData=null; autoDetectedColor=null;
+  document.getElementById('modalTitle').textContent='Nueva prenda';
+  document.getElementById('saveAdd').textContent='Guardar prenda';
+  document.getElementById('deleteItemBtn').style.display='none';
   document.getElementById('photoPreviewBox').innerHTML='<span class="hint">Sin foto todavía</span>';
+  document.getElementById('catInput').value='top';
   document.getElementById('nameInput').value='';
   document.getElementById('formalityInput').value='2';
   document.getElementById('patternInput').value='liso';
   document.getElementById('silhouetteInput').value='regular';
   document.getElementById('colorInput').value='#888888';
+  document.getElementById('hexInput').value='';
   document.getElementById('autoTag').textContent='sube una foto para detectarlo';
+  renderPresetSwatches();
   addModal.classList.add('show');
-});
+}
+function openModalForEdit(id){
+  const it=items.find(i=>i.id===id);
+  if(!it) return;
+  editingId=id;
+  currentPhotoData=null; autoDetectedColor=null;
+  document.getElementById('modalTitle').textContent='Editar prenda';
+  document.getElementById('saveAdd').textContent='Guardar cambios';
+  document.getElementById('deleteItemBtn').style.display='block';
+  document.getElementById('photoPreviewBox').innerHTML=`<img src="${it.photo}">`;
+  document.getElementById('catInput').value=it.category;
+  document.getElementById('nameInput').value=it.name||'';
+  document.getElementById('formalityInput').value=String(it.formality||2);
+  document.getElementById('patternInput').value=it.pattern||'liso';
+  document.getElementById('silhouetteInput').value=it.silhouette||'regular';
+  document.getElementById('colorInput').value=it.color;
+  document.getElementById('hexInput').value=it.color;
+  document.getElementById('autoTag').textContent='color guardado de esta prenda';
+  renderPresetSwatches();
+  addModal.classList.add('show');
+}
+
+document.getElementById('openAdd').addEventListener('click',openModalForAdd);
 document.getElementById('cancelAdd').addEventListener('click',()=>addModal.classList.remove('show'));
 
 document.getElementById('btnCamera').addEventListener('click',()=>document.getElementById('photoInputCamera').click());
@@ -591,22 +662,40 @@ function handlePhotoFile(file){
 document.getElementById('photoInputCamera').addEventListener('change',e=>handlePhotoFile(e.target.files[0]));
 document.getElementById('photoInputGallery').addEventListener('change',e=>handlePhotoFile(e.target.files[0]));
 document.getElementById('saveAdd').addEventListener('click',async ()=>{
-  if(!currentPhotoData){ alert('Agrega una foto primero'); return; }
+  const existing=editingId? items.find(i=>i.id===editingId) : null;
+  if(!currentPhotoData && !existing){ alert('Agrega una foto primero'); return; }
   const item={
-    id:'it_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-    photo:currentPhotoData,
+    id:editingId || ('it_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),
+    photo:currentPhotoData || existing.photo,
     category:document.getElementById('catInput').value,
     name:document.getElementById('nameInput').value.trim(),
     formality:parseInt(document.getElementById('formalityInput').value,10),
     pattern:document.getElementById('patternInput').value,
     silhouette:document.getElementById('silhouetteInput').value,
     color:document.getElementById('colorInput').value,
-    createdAt:Date.now()
+    createdAt: existing? existing.createdAt : Date.now()
   };
   await dbAdd(item);
-  items.push(item);
+  if(existing){
+    items=items.map(i=>i.id===item.id? item : i);
+    selectedSlots=selectedSlots.map(s=> s && s.id===item.id ? item : s);
+  } else {
+    items.push(item);
+  }
   addModal.classList.remove('show');
   renderCloset();
+  renderCombineSlots();
+});
+
+document.getElementById('deleteItemBtn').addEventListener('click',async ()=>{
+  if(!editingId) return;
+  if(!confirm('¿Eliminar esta prenda de tu armario?')) return;
+  await dbDelete(editingId);
+  items=items.filter(i=>i.id!==editingId);
+  selectedSlots=selectedSlots.map(s=> s && s.id===editingId ? null : s);
+  addModal.classList.remove('show');
+  renderCloset();
+  renderCombineSlots();
 });
 
 /* ---------- Closet render ---------- */
@@ -638,16 +727,7 @@ function renderCloset(){
 document.getElementById('filterCat').addEventListener('change',renderCloset);
 
 function openItemDetail(id){
-  const it=items.find(i=>i.id===id);
-  if(!it) return;
-  if(confirm((it.name||CAT_LABELS[it.category])+'\n\n¿Eliminar esta prenda de tu armario?')){
-    dbDelete(id).then(()=>{
-      items=items.filter(i=>i.id!==id);
-      selectedSlots=selectedSlots.map(s=> s && s.id===id ? null : s);
-      renderCloset();
-      renderCombineSlots();
-    });
-  }
+  openModalForEdit(id);
 }
 
 /* ---------- Combine ---------- */
