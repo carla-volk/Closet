@@ -235,6 +235,11 @@ select{appearance:none; -webkit-appearance:none;}
       </select>
       <button class="add-btn" id="openAdd">＋ Añadir prenda</button>
     </div>
+    <div class="closet-toolbar" style="margin-top:-8px;">
+      <button class="chip-btn" id="exportBtn">⬇ Exportar respaldo (JSON)</button>
+      <button class="chip-btn" id="importBtn">⬆ Restaurar respaldo</button>
+      <input type="file" accept="application/json" id="importInput" class="visually-hidden">
+    </div>
     <div class="grid" id="closetGrid"></div>
   </section>
 
@@ -865,6 +870,48 @@ function renderRules(){
   renderCloset();
   renderCombineSlots();
 })();
+
+/* ---------- Backup: export / import ---------- */
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  if(items.length===0){ alert('Tu armario está vacío, no hay nada que exportar todavía.'); return; }
+  const payload={app:'percha',exportedAt:new Date().toISOString(),items};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,10);
+  a.href=url; a.download=`percha-respaldo-${stamp}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importInput').click());
+document.getElementById('importInput').addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const payload=JSON.parse(ev.target.result);
+      const incoming=Array.isArray(payload)? payload : payload.items;
+      if(!Array.isArray(incoming)) throw new Error('formato inválido');
+      const merge=confirm(`El respaldo tiene ${incoming.length} prenda(s).\n\nAceptar = agregar a tu armario actual.\nCancelar = reemplazar todo tu armario actual con este respaldo.`);
+      if(!merge){
+        for(const it of items) await dbDelete(it.id);
+        items=[];
+      }
+      for(const it of incoming){
+        if(!it.id) it.id='it_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        await dbAdd(it);
+      }
+      items=await dbAll();
+      renderCloset(); renderCombineSlots();
+      alert('Respaldo restaurado.');
+    }catch(err){
+      alert('No se pudo leer ese archivo como respaldo de Percha.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
 </script>
 </body>
 </html>
