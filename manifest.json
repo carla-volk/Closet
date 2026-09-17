@@ -1,0 +1,25 @@
+{
+  "name": "Percha — armario inteligente",
+  "short_name": "Percha",
+  "description": "Catálogo de ropa y combinador de outfits con reglas de color y estilo.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b1a17",
+  "theme_color": "#1b1a17",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

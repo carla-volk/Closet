@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Percha — tu armario inteligente</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b1a17">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1b1a17;
+  --paper:#f3ede1;
+  --paper-dim:#e7dfcf;
+  --teal:#2b5c56;
+  --teal-dim:#split;
+  --clay:#a8532f;
+  --line: rgba(27,26,23,0.14);
+  --good:#3f7a4d;
+  --warn:#b5822a;
+  --bad:#a4402f;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#f3ede1;
+    --paper:#211f1b;
+    --paper-dim:#2a2822;
+    --line: rgba(243,237,225,0.14);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#f3ede1;
+  --paper:#211f1b;
+  --paper-dim:#2a2822;
+  --line: rgba(243,237,225,0.14);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px;}
+
+header.top{
+  display:flex; align-items:baseline; justify-content:space-between;
+  padding:6px 2px 18px;
+  border-bottom:1px solid rgba(243,237,225,0.18);
+  margin-bottom:22px;
+}
+header.top h1{
+  font-family:'Fraunces',serif; font-weight:600; font-style:italic;
+  font-size:28px; margin:0; letter-spacing:0.2px;
+}
+header.top span{font-size:12px; opacity:0.55;}
+
+nav.tabs{display:flex; gap:2px; margin-bottom:26px; border:1px solid rgba(243,237,225,0.2); border-radius:999px; padding:3px; width:fit-content;}
+nav.tabs button{
+  border:none; background:transparent; color:var(--paper); opacity:0.55;
+  font-family:'Inter',sans-serif; font-size:13.5px; font-weight:600;
+  padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .18s ease;
+}
+nav.tabs button.active{background:var(--paper); color:var(--ink); opacity:1;}
+
+section{display:none;}
+section.active{display:block;}
+
+h2.section-title{
+  font-family:'Fraunces',serif; font-weight:500; font-style:italic;
+  font-size:21px; margin:0 0 4px;
+}
+p.section-sub{font-size:13px; opacity:0.6; margin:0 0 18px; max-width:52ch; line-height:1.5;}
+
+/* CLOSET GRID */
+.closet-toolbar{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+select, .chip-btn{
+  background:transparent; border:1px solid rgba(243,237,225,0.28); color:var(--paper);
+  font-family:'Inter',sans-serif; font-size:12.5px; padding:7px 11px; border-radius:999px;
+  cursor:pointer;
+}
+select{appearance:none; -webkit-appearance:none;}
+.add-btn{
+  margin-left:auto;
+  background:var(--clay); color:#fff5eb; border:none; font-weight:700;
+  font-size:13px; padding:10px 18px; border-radius:999px; cursor:pointer;
+  display:flex; align-items:center; gap:6px;
+}
+.add-btn:active{transform:scale(0.97);}
+
+.grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px;
+}
+.item-card{
+  background:var(--paper); border-radius:var(--radius); overflow:hidden; cursor:pointer;
+  position:relative; aspect-ratio:3/4; border:2px solid transparent;
+}
+.item-card.selected{border-color:var(--clay);}
+.item-card img{width:100%; height:100%; object-fit:cover; display:block;}
+.item-card .swatch{
+  position:absolute; bottom:6px; left:6px; width:16px; height:16px; border-radius:50%;
+  border:2px solid rgba(255,255,255,0.85); box-shadow:0 0 0 1px rgba(0,0,0,0.25);
+}
+.item-card .cat{
+  position:absolute; top:6px; left:6px; background:rgba(27,26,23,0.72); color:#f3ede1;
+  font-size:9.5px; padding:2px 7px; border-radius:999px; text-transform:lowercase; letter-spacing:0.2px;
+}
+.empty-note{
+  border:1px dashed rgba(243,237,225,0.3); border-radius:var(--radius); padding:34px 20px;
+  text-align:center; font-size:13.5px; opacity:0.65; line-height:1.6;
+}
+
+/* MODAL */
+.modal-backdrop{
+  display:none; position:fixed; inset:0; background:rgba(10,9,7,0.6); z-index:50;
+  align-items:flex-end; justify-content:center;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  background:var(--paper); color:var(--ink); width:100%; max-width:520px;
+  border-radius:18px 18px 0 0; padding:22px 20px 26px; max-height:88vh; overflow-y:auto;
+}
+.modal h3{font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:19px; margin:0 0 16px;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; opacity:0.55; margin-bottom:6px;}
+.field select, .field input[type=text]{
+  width:100%; border:1px solid var(--line); background:transparent; color:var(--ink);
+  padding:10px 12px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px;
+}
+.photo-drop{
+  border:1.5px dashed var(--line); border-radius:10px; padding:14px; text-align:center;
+  cursor:pointer; position:relative; overflow:hidden; min-height:160px;
+  display:flex; align-items:center; justify-content:center; background:var(--paper-dim);
+}
+.photo-drop img{max-width:100%; max-height:260px; border-radius:6px;}
+.photo-drop .hint{font-size:12.5px; opacity:0.55;}
+.color-row{display:flex; align-items:center; gap:10px;}
+.color-row input[type=color]{width:44px; height:36px; border:none; border-radius:8px; padding:0; background:none;}
+.color-row .auto-tag{font-size:11.5px; opacity:0.55;}
+.photo-btn-row{display:flex; gap:8px; margin-top:8px;}
+.photo-btn{
+  flex:1; background:var(--teal); color:#eaf3f1; border:none; border-radius:8px;
+  padding:11px 8px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+}
+.photo-btn:active{transform:scale(0.97);}
+.visually-hidden{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+.modal-actions{display:flex; gap:10px; margin-top:18px;}
+.btn{border:none; border-radius:999px; padding:11px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Inter',sans-serif;}
+.btn-primary{background:var(--teal); color:#eaf3f1; flex:1;}
+.btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn-danger{background:transparent; color:var(--bad); border:1px solid rgba(164,64,47,0.4);}
+
+/* COMBINE */
+.combine-slots{display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; margin-bottom:16px;}
+.slot{
+  aspect-ratio:1; border-radius:var(--radius); border:1.5px dashed rgba(243,237,225,0.3);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; overflow:hidden;
+}
+.slot img{width:100%; height:100%; object-fit:cover;}
+.slot .x{
+  position:absolute; top:3px; right:3px; background:rgba(0,0,0,0.55); color:#fff; width:18px; height:18px;
+  border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center;
+}
+.combine-cta{
+  width:100%; background:var(--clay); color:#fff5eb; border:none; padding:13px; border-radius:999px;
+  font-weight:700; font-size:14px; cursor:pointer; margin-bottom:22px;
+}
+.combine-cta:disabled{opacity:0.35; cursor:not-allowed;}
+
+.result-card{
+  background:var(--paper); color:var(--ink); border-radius:14px; padding:20px; margin-bottom:16px;
+}
+.result-head{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+.score-ring{
+  width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:'Fraunces',serif; font-weight:600; font-size:16px; flex-shrink:0; color:#fff;
+}
+.result-head h4{font-family:'Fraunces',serif; font-style:italic; font-weight:600; margin:0 0 3px; font-size:18px;}
+.result-head .tag{font-size:11.5px; opacity:0.6; text-transform:uppercase; letter-spacing:0.4px;}
+.result-card p{font-size:13.5px; line-height:1.6; margin:0 0 10px; opacity:0.85;}
+.palette-strip{display:flex; height:10px; border-radius:6px; overflow:hidden; margin-bottom:14px;}
+.suggest-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;}
+.suggest-row .mini{width:64px; flex-shrink:0;}
+.suggest-row .mini img{width:64px; height:80px; object-fit:cover; border-radius:6px; display:block;}
+.suggest-row .mini .lbl{font-size:10px; opacity:0.6; margin-top:3px; text-align:center;}
+
+/* RULES */
+.rule-card{
+  border:1px solid rgba(243,237,225,0.16); border-radius:12px; padding:16px 18px; margin-bottom:10px;
+}
+.rule-card h4{font-family:'Fraunces',serif; font-style:italic; font-size:15.5px; margin:0 0 4px; font-weight:600;}
+.rule-card p{font-size:13px; opacity:0.68; line-height:1.55; margin:0 0 10px;}
+.rule-card .wheel-demo{display:flex; gap:5px;}
+.rule-card .wheel-demo span{width:20px; height:20px; border-radius:50%;}
+
+.pair-table{border:1px solid rgba(243,237,225,0.16); border-radius:12px; overflow:hidden;}
+.pair-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid rgba(243,237,225,0.12); flex-wrap:wrap;}
+.pair-row:last-child{border-bottom:none;}
+.pair-base{display:flex; align-items:center; gap:7px; font-weight:700; font-size:13px; text-transform:capitalize; width:88px; flex-shrink:0;}
+.pair-partners{display:flex; gap:6px; flex-wrap:wrap;}
+.pair-chip{display:flex; align-items:center; gap:5px; font-size:11.5px; opacity:0.8; background:rgba(243,237,225,0.08); padding:4px 9px; border-radius:999px; text-transform:capitalize;}
+.dot{width:10px; height:10px; border-radius:50%; flex-shrink:0; border:1px solid rgba(0,0,0,0.15);}
+
+::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Percha</h1>
+    <span id="itemCount">0 prendas</span>
+  </header>
+
+  <nav class="tabs">
+    <button class="active" data-tab="closet">Armario</button>
+    <button data-tab="combine">Combinar</button>
+    <button data-tab="rules">Base Amelia</button>
+  </nav>
+
+  <section id="tab-closet" class="active">
+    <h2 class="section-title">Tu armario</h2>
+    <p class="section-sub">Agrega fotos de tus prendas. Detectamos el color dominante automáticamente y tú puedes ajustarlo.</p>
+    <div class="closet-toolbar">
+      <select id="filterCat">
+        <option value="">Todas las categorías</option>
+        <option value="top">Tops</option>
+        <option value="bottom">Bottoms</option>
+        <option value="dress">Vestidos</option>
+        <option value="outerwear">Abrigos/chaquetas</option>
+        <option value="shoes">Calzado</option>
+        <option value="accessory">Accesorios</option>
+      </select>
+      <button class="add-btn" id="openAdd">＋ Añadir prenda</button>
+    </div>
+    <div class="closet-toolbar" style="margin-top:-8px;">
+      <button class="chip-btn" id="exportBtn">⬇ Exportar respaldo (JSON)</button>
+      <button class="chip-btn" id="importBtn">⬆ Restaurar respaldo</button>
+      <input type="file" accept="application/json" id="importInput" class="visually-hidden">
+    </div>
+    <div class="grid" id="closetGrid"></div>
+  </section>
+
+  <section id="tab-combine">
+    <h2 class="section-title">Combina un outfit</h2>
+    <p class="section-sub">Elige piezas de tu armario (toca los espacios) y evaluamos si combinan, o te sugerimos qué cambiar.</p>
+    <div class="combine-slots" id="combineSlots"></div>
+    <button class="combine-cta" id="evalBtn">Evaluar combinación</button>
+    <div id="resultArea"></div>
+  </section>
+
+  <section id="tab-rules">
+    <h2 class="section-title">Base de conocimiento Amelia</h2>
+    <p class="section-sub">El conjunto de reglas fijas (sin IA) de color y estilo que Percha consulta para calificar cada outfit.</p>
+    <div id="rulesArea"></div>
+  </section>
+</div>
+
+<!-- Add item modal -->
+<div class="modal-backdrop" id="addModal">
+  <div class="modal">
+    <h3>Nueva prenda</h3>
+    <div class="field">
+      <label>Foto</label>
+      <div class="photo-drop" id="photoPreviewBox">
+        <span class="hint">Sin foto todavía</span>
+      </div>
+      <div class="photo-btn-row">
+        <button type="button" class="photo-btn" id="btnCamera">📷 Tomar foto</button>
+        <button type="button" class="photo-btn" id="btnGallery">🖼️ Elegir de galería</button>
+      </div>
+    </div>
+    <input type="file" accept="image/*" capture="environment" id="photoInputCamera" class="visually-hidden">
+    <input type="file" accept="image/*" id="photoInputGallery" class="visually-hidden">
+    <div class="field">
+      <label>Categoría</label>
+      <select id="catInput">
+        <option value="top">Top (camisa, blusa, playera)</option>
+        <option value="bottom">Bottom (pantalón, falda)</option>
+        <option value="dress">Vestido</option>
+        <option value="outerwear">Abrigo / chaqueta</option>
+        <option value="shoes">Calzado</option>
+        <option value="accessory">Accesorio</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Nombre (opcional)</label>
+      <input type="text" id="nameInput" placeholder="Ej. Blazer camel">
+    </div>
+    <div class="field">
+      <label>Formalidad</label>
+      <select id="formalityInput">
+        <option value="1">Deportivo / athleisure</option>
+        <option value="2" selected>Casual</option>
+        <option value="3">Business casual</option>
+        <option value="4">Formal / elegante</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Patrón</label>
+      <select id="patternInput">
+        <option value="liso" selected>Liso</option>
+        <option value="rayas">Rayas</option>
+        <option value="cuadros">Cuadros</option>
+        <option value="floral">Floral</option>
+        <option value="animal">Animal print</option>
+        <option value="otro">Otro estampado</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Silueta</label>
+      <select id="silhouetteInput">
+        <option value="ajustada">Ajustada</option>
+        <option value="regular" selected>Regular</option>
+        <option value="holgada">Holgada / oversized</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Color dominante</label>
+      <div class="color-row">
+        <input type="color" id="colorInput" value="#888888">
+        <span class="auto-tag" id="autoTag">sube una foto para detectarlo</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelAdd">Cancelar</button>
+      <button class="btn btn-primary" id="saveAdd">Guardar prenda</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- IndexedDB ---------- */
+let db;
+const DB_NAME='percha-db', STORE='items';
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE,{keyPath:'id'});
+    };
+    req.onsuccess=e=>{db=e.target.result; res();};
+    req.onerror=e=>rej(e);
+  });
+}
+function dbAdd(item){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(item);
+    tx.oncomplete=()=>res();
+    tx.onerror=e=>rej(e);
+  });
+}
+function dbDelete(id){
+  return new Promise((res)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete=()=>res();
+  });
+}
+function dbAll(){
+  return new Promise((res)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).getAll();
+    req.onsuccess=()=>res(req.result||[]);
+  });
+}
+
+/* ---------- State ---------- */
+let items=[];
+let currentPhotoData=null;
+let autoDetectedColor=null;
+
+const CAT_LABELS={top:'Top',bottom:'Bottom',dress:'Vestido',outerwear:'Abrigo',shoes:'Calzado',accessory:'Accesorio'};
+const FORMALITY_LABELS={1:'deportivo',2:'casual',3:'business casual',4:'formal'};
+const PATTERN_LABELS={liso:'liso',rayas:'rayas',cuadros:'cuadros',floral:'floral',animal:'animal print',otro:'estampado'};
+
+/* Named-color swatches used to map a hex to a human color name for the pairing table */
+const NAMED_COLORS={
+  rojo:'#B3282D', camel:'#C19A6B', navy:'#1F2A44', rosa:'#E8A0BF', crema:'#F1E9D2', esmeralda:'#0F6E4E',
+  naranja:'#D2691E', cobalto:'#1E4FA3', denim:'#4F6D8C', tan:'#D2B48C', oliva:'#6B6B2A', marron:'#6B4226',
+  amarillo:'#E8C547', lila:'#C8A2C8', gris:'#8C8C8C', verde:'#2E7D4F', negro:'#1A1A1A', azul:'#2F6FB3',
+  morado:'#6A3E9C', blanco:'#F5F5F0', vino:'#6E1E2E'
+};
+function nearestNamedColor(hex){
+  const r1=parseInt(hex.slice(1,3),16), g1=parseInt(hex.slice(3,5),16), b1=parseInt(hex.slice(5,7),16);
+  let best=null,bestD=Infinity;
+  for(const name in NAMED_COLORS){
+    const h=NAMED_COLORS[name];
+    const r2=parseInt(h.slice(1,3),16), g2=parseInt(h.slice(3,5),16), b2=parseInt(h.slice(5,7),16);
+    const d=(r1-r2)**2+(g1-g2)**2+(b1-b2)**2;
+    if(d<bestD){bestD=d; best=name;}
+  }
+  return best;
+}
+
+/* ---------- Base de conocimiento Amelia ---------- */
+/* Reglas fijas, sin IA. El motor de evaluación consulta ambos bloques (color + estilo)
+   para cada outfit y combina los resultados. */
+const AMELIA_KB = {
+  color: [
+    {id:'sixty-thirty-ten', name:'Regla 60-30-10', desc:'Un color principal domina el 60% del look, uno secundario el 30% y un acento el 10% (accesorios/calzado).'},
+    {id:'analogous', name:'Análoga', desc:'Colores vecinos en el círculo cromático (diferencia de tono ≤35°). Resultado armonioso.'},
+    {id:'complementary', name:'Complementaria', desc:'Colores opuestos en el círculo (diferencia ≥150°). Contraste vibrante.'},
+    {id:'triadic', name:'Triádica', desc:'Tres colores equidistantes (100°-150° entre sí). Dinámico, requiere que uno domine.'},
+    {id:'monochrome', name:'Monocromática', desc:'Variaciones de un mismo tono. Alarga y estiliza.'},
+    {id:'neutral-base', name:'Base neutra', desc:'Negro, blanco, gris, beige — combinan con cualquier acento de color.'},
+  ],
+  style: [
+    {id:'formality-match', name:'Coherencia de formalidad', desc:'Las piezas de un outfit deben estar a máximo un nivel de distancia en la escala deportivo → casual → business casual → formal. Mezclar extremos (ej. tenis deportivos con traje formal) se lee como incoherente salvo que sea una elección deliberada de estilo "smart casual".'},
+    {id:'pattern-mixing', name:'Mezcla de estampados', desc:'Máximo un estampado protagonista por outfit. Dos o más estampados distintos (ej. rayas + floral) compiten visualmente salvo que se maneje con mucha intención de escala y color.'},
+    {id:'silhouette-balance', name:'Balance de siluetas', desc:'Combina una pieza ajustada con una holgada para dar proporción (ej. top ajustado + pantalón amplio, o top oversized + pantalón ajustado). Vestir todo holgado o todo ajustado a la vez suele perder estructura.'},
+    {id:'occasion-consistency', name:'Consistencia de ocasión', desc:'Prendas deportivas y prendas formales rara vez conviven bien en el mismo outfit — revisa que el nivel de formalidad general sea consistente con la ocasión.'},
+  ],
+  /* Tabla de pares de color de uso diario: color base -> sus mejores acompañantes.
+     Se trata como relación simétrica (si A empareja con B, B empareja con A). */
+  pairings: {
+    rojo:['camel','navy','rosa','crema','esmeralda'],
+    naranja:['cobalto','denim','tan','oliva','marron'],
+    amarillo:['rojo','lila','gris','crema','oliva'],
+    verde:['navy','crema','denim','negro','marron'],
+    azul:['camel','naranja','gris','denim','marron'],
+    morado:['blanco','gris','negro','amarillo','navy'],
+    rosa:['vino','denim','gris','crema','marron'],
+    marron:['crema','oliva','rosa','negro','azul'],
+  }
+};
+
+function namedPairingCheck(pieces){
+  const withNames=pieces.map(p=>({piece:p, name:nearestNamedColor(p.color)}));
+  const matches=[];
+  for(let i=0;i<withNames.length;i++){
+    for(let j=i+1;j<withNames.length;j++){
+      const a=withNames[i].name, b=withNames[j].name;
+      if(a===b) continue;
+      const listed = (AMELIA_KB.pairings[a]&&AMELIA_KB.pairings[a].includes(b)) || (AMELIA_KB.pairings[b]&&AMELIA_KB.pairings[b].includes(a));
+      if(listed) matches.push(a+' + '+b);
+    }
+  }
+  return matches;
+}
+
+function styleAnalysis(pieces){
+  let score=75, notes=[];
+  // Formality spread
+  const formalities=pieces.map(p=>p.formality||2);
+  const spread=Math.max(...formalities)-Math.min(...formalities);
+  if(spread>=3){
+    score-=30;
+    notes.push('Hay un salto grande de formalidad entre piezas (regla "coherencia de formalidad") — combina niveles más cercanos o hazlo un contraste deliberado tipo smart casual.');
+  } else if(spread===2){
+    score-=12;
+    notes.push('Las piezas están a dos niveles de formalidad de distancia; funciona si es un contraste buscado, pero cuídalo.');
+  } else {
+    notes.push('Los niveles de formalidad de las piezas son coherentes entre sí.');
+  }
+  // Pattern mixing
+  const patterned=pieces.filter(p=>p.pattern && p.pattern!=='liso');
+  const distinctPatterns=new Set(patterned.map(p=>p.pattern));
+  if(distinctPatterns.size>=2){
+    score-=18;
+    notes.push('Mezclas más de un tipo de estampado (regla "mezcla de estampados") — puede verse recargado; prueba dejar solo una pieza estampada como protagonista.');
+  } else if(distinctPatterns.size===1 && patterned.length===1){
+    notes.push('Tienes una sola pieza con estampado como protagonista — bien manejado.');
+  }
+  // Silhouette balance
+  const silhouettes=pieces.map(p=>p.silhouette||'regular');
+  const hasFitted=silhouettes.includes('ajustada'), hasLoose=silhouettes.includes('holgada');
+  if(hasFitted && hasLoose){
+    score+=8;
+    notes.push('Buen balance de siluetas: combinas piezas ajustadas con holgadas para dar proporción.');
+  } else if(silhouettes.every(s=>s==='holgada') && silhouettes.length>=2){
+    score-=10;
+    notes.push('Todas las piezas son holgadas (regla "balance de siluetas") — considera ajustar al menos una para no perder estructura.');
+  } else if(silhouettes.every(s=>s==='ajustada') && silhouettes.length>=2){
+    score-=6;
+    notes.push('Todas las piezas son ajustadas — una pieza más suelta le daría respiro al look.');
+  }
+  score=Math.max(15,Math.min(98,score));
+  return {score, notes};
+}
+
+function evaluateStyleOnly(pieces){ return styleAnalysis(pieces); }
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='rules') renderRules();
+    if(btn.dataset.tab==='combine') renderCombineSlots();
+  });
+});
+
+/* ---------- Color helpers ---------- */
+function hexToHsl(hex){
+  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){h=0;s=0;}
+  else{
+    const d=max-min;
+    s=l>0.5? d/(2-max-min): d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d+(g<b?6:0); break;
+      case g: h=(b-r)/d+2; break;
+      case b: h=(r-g)/d+4; break;
+    }
+    h*=60;
+  }
+  return {h,s:s*100,l:l*100};
+}
+function hueDist(a,b){
+  let d=Math.abs(a-b)%360;
+  return d>180? 360-d : d;
+}
+function isNeutral(hsl){
+  return hsl.s<16 || hsl.l<12 || hsl.l>92;
+}
+function rgbToHex(r,g,b){
+  return '#'+[r,g,b].map(x=>{const h=Math.round(x).toString(16); return h.length===1?'0'+h:h;}).join('');
+}
+
+/* Simple dominant-color extraction: sample central region, bucket-average excluding near-white/black extremes lightly */
+function extractDominantColor(imgEl){
+  const canvas=document.createElement('canvas');
+  const w=40,h=40;
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(imgEl,0,0,w,h);
+  const data=ctx.getImageData(0,0,w,h).data;
+  const buckets={};
+  for(let i=0;i<data.length;i+=4){
+    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+    if(a<100) continue;
+    const key=[Math.round(r/24)*24,Math.round(g/24)*24,Math.round(b/24)*24].join(',');
+    buckets[key]=(buckets[key]||0)+1;
+  }
+  let best=null,bestCount=0;
+  for(const k in buckets){
+    if(buckets[k]>bestCount){bestCount=buckets[k]; best=k;}
+  }
+  if(!best) return '#888888';
+  const [r,g,b]=best.split(',').map(Number);
+  return rgbToHex(r,g,b);
+}
+
+/* ---------- Add item modal ---------- */
+const addModal=document.getElementById('addModal');
+document.getElementById('openAdd').addEventListener('click',()=>{
+  currentPhotoData=null; autoDetectedColor=null;
+  document.getElementById('photoPreviewBox').innerHTML='<span class="hint">Sin foto todavía</span>';
+  document.getElementById('nameInput').value='';
+  document.getElementById('formalityInput').value='2';
+  document.getElementById('patternInput').value='liso';
+  document.getElementById('silhouetteInput').value='regular';
+  document.getElementById('colorInput').value='#888888';
+  document.getElementById('autoTag').textContent='sube una foto para detectarlo';
+  addModal.classList.add('show');
+});
+document.getElementById('cancelAdd').addEventListener('click',()=>addModal.classList.remove('show'));
+
+document.getElementById('btnCamera').addEventListener('click',()=>document.getElementById('photoInputCamera').click());
+document.getElementById('btnGallery').addEventListener('click',()=>document.getElementById('photoInputGallery').click());
+
+function handlePhotoFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    currentPhotoData=ev.target.result;
+    document.getElementById('photoPreviewBox').innerHTML=`<img src="${currentPhotoData}">`;
+    const img=new Image();
+    img.onload=()=>{
+      const c=extractDominantColor(img);
+      autoDetectedColor=c;
+      document.getElementById('colorInput').value=c;
+      document.getElementById('autoTag').textContent='detectado automáticamente — puedes ajustarlo';
+    };
+    img.src=currentPhotoData;
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('photoInputCamera').addEventListener('change',e=>handlePhotoFile(e.target.files[0]));
+document.getElementById('photoInputGallery').addEventListener('change',e=>handlePhotoFile(e.target.files[0]));
+document.getElementById('saveAdd').addEventListener('click',async ()=>{
+  if(!currentPhotoData){ alert('Agrega una foto primero'); return; }
+  const item={
+    id:'it_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    photo:currentPhotoData,
+    category:document.getElementById('catInput').value,
+    name:document.getElementById('nameInput').value.trim(),
+    formality:parseInt(document.getElementById('formalityInput').value,10),
+    pattern:document.getElementById('patternInput').value,
+    silhouette:document.getElementById('silhouetteInput').value,
+    color:document.getElementById('colorInput').value,
+    createdAt:Date.now()
+  };
+  await dbAdd(item);
+  items.push(item);
+  addModal.classList.remove('show');
+  renderCloset();
+});
+
+/* ---------- Closet render ---------- */
+function renderCloset(){
+  const filter=document.getElementById('filterCat').value;
+  const grid=document.getElementById('closetGrid');
+  const list=items.filter(it=> !filter || it.category===filter).sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('itemCount').textContent=items.length+' prenda'+(items.length===1?'':'s');
+  if(list.length===0){
+    grid.innerHTML='';
+    const note=document.createElement('div');
+    note.className='empty-note';
+    note.style.gridColumn='1/-1';
+    note.textContent='Aún no hay prendas aquí. Toca "Añadir prenda" para empezar a construir tu armario digital.';
+    grid.appendChild(note);
+    return;
+  }
+  grid.innerHTML=list.map(it=>`
+    <div class="item-card" data-id="${it.id}">
+      <img src="${it.photo}">
+      <span class="cat">${CAT_LABELS[it.category]}</span>
+      <span class="swatch" style="background:${it.color}"></span>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.item-card').forEach(card=>{
+    card.addEventListener('click',()=>openItemDetail(card.dataset.id));
+  });
+}
+document.getElementById('filterCat').addEventListener('change',renderCloset);
+
+function openItemDetail(id){
+  const it=items.find(i=>i.id===id);
+  if(!it) return;
+  if(confirm((it.name||CAT_LABELS[it.category])+'\n\n¿Eliminar esta prenda de tu armario?')){
+    dbDelete(id).then(()=>{
+      items=items.filter(i=>i.id!==id);
+      selectedSlots=selectedSlots.map(s=> s && s.id===id ? null : s);
+      renderCloset();
+      renderCombineSlots();
+    });
+  }
+}
+
+/* ---------- Combine ---------- */
+let selectedSlots=[null,null,null,null,null];
+function renderCombineSlots(){
+  const wrap=document.getElementById('combineSlots');
+  wrap.innerHTML='';
+  selectedSlots.forEach((it,idx)=>{
+    const el=document.createElement('div');
+    el.className='slot';
+    if(it){
+      el.innerHTML=`<img src="${it.photo}"><span class="x">✕</span>`;
+      el.querySelector('.x').addEventListener('click',ev=>{
+        ev.stopPropagation(); selectedSlots[idx]=null; renderCombineSlots();
+      });
+      el.addEventListener('click',()=>pickForSlot(idx));
+    } else {
+      el.innerHTML='<span style="font-size:22px;opacity:0.4;">＋</span>';
+      el.addEventListener('click',()=>pickForSlot(idx));
+    }
+    wrap.appendChild(el);
+  });
+  document.getElementById('evalBtn').disabled = selectedSlots.filter(Boolean).length<2;
+}
+function pickForSlot(idx){
+  if(items.length===0){ alert('Primero agrega prendas a tu armario.'); return; }
+  const names=items.map((it,i)=>`${i+1}. [${CAT_LABELS[it.category]}] ${it.name||'sin nombre'}`).join('\n');
+  const pick=prompt('Elige el número de la prenda:\n\n'+names);
+  const n=parseInt(pick,10);
+  if(n && items[n-1]){ selectedSlots[idx]=items[n-1]; renderCombineSlots(); }
+}
+
+/* ---------- Evaluation engine ---------- */
+function evaluateOutfit(pieces){
+  const hsls=pieces.map(p=>({piece:p, hsl:hexToHsl(p.color)}));
+  const nonNeutral=hsls.filter(x=>!isNeutral(x.hsl));
+  let score=70, tags=[], notes=[];
+
+  if(nonNeutral.length<=1){
+    score=88; tags.push('Neutro / monocromático');
+    notes.push('Tu outfit se apoya en tonos neutros o un solo color protagonista — una base segura y elegante que combina con casi todo.');
+  } else {
+    // check pairwise hue relationships among non-neutral pieces
+    let comp=0, analog=0, triad=0, clash=0, pairs=0;
+    for(let i=0;i<nonNeutral.length;i++){
+      for(let j=i+1;j<nonNeutral.length;j++){
+        pairs++;
+        const d=hueDist(nonNeutral[i].hsl.h, nonNeutral[j].hsl.h);
+        if(d<=35) analog++;
+        else if(d>=150) comp++;
+        else if(d>=100 && d<150) triad++;
+        else clash++;
+      }
+    }
+    if(comp>0 && clash===0){ score=90; tags.push('Complementario'); notes.push('Usas colores opuestos en el círculo cromático: genera contraste vibrante y con intención.'); }
+    else if(analog===pairs){ score=92; tags.push('Análogo'); notes.push('Tus colores son vecinos en el círculo cromático: armonía fluida y muy fácil de llevar.'); }
+    else if(triad>0 && clash===0){ score=82; tags.push('Triádico'); notes.push('Colores equidistantes en el círculo: dinámico, pero cuida que uno domine (regla 60-30-10) para que no compitan entre sí.'); }
+    else if(clash>0){ score=48; tags.push('Podría mejorar'); notes.push('Hay colores que quedan a media distancia en el círculo cromático (ni cercanos ni opuestos), lo que puede leerse como desordenado en vez de intencional.'); }
+    else { score=75; tags.push('Combinación mixta'); }
+
+    // too many saturated colors
+    if(nonNeutral.length>=4){
+      score-=10;
+      notes.push('Tienes varios colores fuertes a la vez — considera dejar que uno domine (60%) y usar los demás como acento (30% y 10%).');
+    }
+  }
+
+  // dominance / 60-30-10 heuristic: if exactly 3 pieces with 1 neutral + 2 saturated of similar family, good
+  if(pieces.length>=3 && nonNeutral.length>=1 && (pieces.length-nonNeutral.length)>=1){
+    notes.push('Combinar tono(s) neutro(s) con tu(s) color(es) principal(es) ayuda a equilibrar el look sin esfuerzo.');
+  }
+
+  score=Math.max(20,Math.min(98,score));
+
+  const pairMatches=namedPairingCheck(pieces);
+  if(pairMatches.length>0){
+    score=Math.min(98,score+8);
+    notes.push('Coincide con un par clásico de la tabla de combinaciones (' + pairMatches.slice(0,2).join(', ') + ') — una apuesta segura.');
+  }
+
+  const colorResult={score, tag:tags[0]||'Combinación', notes, hsls};
+
+  const styleResult=styleAnalysis(pieces);
+  const combinedScore=Math.round(colorResult.score*0.6 + styleResult.score*0.4);
+
+  return {
+    score:combinedScore,
+    tag:colorResult.tag,
+    colorScore:colorResult.score,
+    styleScore:styleResult.score,
+    colorNotes:colorResult.notes,
+    styleNotes:styleResult.notes,
+    hsls:colorResult.hsls
+  };
+}
+
+function scoreColor(score){
+  if(score>=80) return getComputedStyle(document.documentElement).getPropertyValue('--good');
+  if(score>=55) return getComputedStyle(document.documentElement).getPropertyValue('--warn');
+  return getComputedStyle(document.documentElement).getPropertyValue('--bad');
+}
+
+function suggestReplacements(pieces){
+  // for each category not represented well, or the clashing piece, find better matches from closet
+  const usedIds=new Set(pieces.map(p=>p.id));
+  const others=items.filter(it=>!usedIds.has(it.id));
+  if(others.length===0) return [];
+  const baseHues=pieces.filter(p=>!isNeutral(hexToHsl(p.color))).map(p=>hexToHsl(p.color).h);
+  const avgFormality=pieces.reduce((s,p)=>s+(p.formality||2),0)/pieces.length;
+  const usedPatterns=new Set(pieces.filter(p=>p.pattern&&p.pattern!=='liso').map(p=>p.pattern));
+
+  const scored=others.map(it=>{
+    const hsl=hexToHsl(it.color);
+    let colorS=0;
+    if(isNeutral(hsl)) colorS=60;
+    else if(baseHues.length===0) colorS=55;
+    else {
+      const dists=baseHues.map(h=>hueDist(h,hsl.h));
+      const minD=Math.min(...dists);
+      if(minD<=35) colorS=90;
+      else if(minD>=150) colorS=85;
+      else if(minD>=100) colorS=70;
+      else colorS=30;
+    }
+    // bonus if it's a listed pair-table match with any current piece
+    const itName=nearestNamedColor(it.color);
+    const pairBonus = pieces.some(p=>{
+      const pName=nearestNamedColor(p.color);
+      if(pName===itName) return false;
+      return (AMELIA_KB.pairings[pName]&&AMELIA_KB.pairings[pName].includes(itName)) || (AMELIA_KB.pairings[itName]&&AMELIA_KB.pairings[itName].includes(pName));
+    }) ? 10 : 0;
+    colorS=Math.min(100,colorS+pairBonus);
+    // style compatibility against Amelia KB rules
+    let styleS=80;
+    const formalityGap=Math.abs((it.formality||2)-avgFormality);
+    if(formalityGap>=2) styleS-=35;
+    else if(formalityGap>=1) styleS-=12;
+    if(it.pattern && it.pattern!=='liso' && usedPatterns.size>=1 && !usedPatterns.has(it.pattern)) styleS-=15;
+    const total=colorS*0.6+styleS*0.4;
+    return {it,total};
+  }).sort((a,b)=>b.total-a.total).slice(0,6);
+  return scored.map(x=>x.it);
+}
+
+document.getElementById('evalBtn').addEventListener('click',()=>{
+  const pieces=selectedSlots.filter(Boolean);
+  if(pieces.length<2) return;
+  const res=evaluateOutfit(pieces);
+  const suggestions=suggestReplacements(pieces);
+  const col=scoreColor(res.score);
+  const area=document.getElementById('resultArea');
+  area.innerHTML=`
+    <div class="result-card">
+      <div class="result-head">
+        <div class="score-ring" style="background:${col}">${res.score}</div>
+        <div>
+          <h4>${res.tag}</h4>
+          <span class="tag">${pieces.length} piezas evaluadas</span>
+        </div>
+      </div>
+      <div class="palette-strip">${pieces.map(p=>`<div style="flex:1;background:${p.color}"></div>`).join('')}</div>
+      <p style="font-weight:700;opacity:1;margin-bottom:4px;">Color (${res.colorScore}/100)</p>
+      ${res.colorNotes.map(n=>`<p>${n}</p>`).join('')}
+      <p style="font-weight:700;opacity:1;margin-bottom:4px;">Estilo (${res.styleScore}/100)</p>
+      ${res.styleNotes.map(n=>`<p>${n}</p>`).join('')}
+      ${suggestions.length? `<p style="font-weight:700;opacity:1;margin-bottom:8px;">Del resto de tu armario, esto combina bien:</p>
+      <div class="suggest-row">${suggestions.map(it=>`
+        <div class="mini"><img src="${it.photo}"><div class="lbl">${CAT_LABELS[it.category]}</div></div>
+      `).join('')}</div>` : ''}
+    </div>
+  `;
+});
+
+/* ---------- Rules tab ---------- */
+const COLOR_SWATCH_DEMOS={
+  'sixty-thirty-ten':['#2b5c56','#a8532f','#c9a86a'],
+  'analogous':['#2b5c56','#2b7c8a','#2ba0a8'],
+  'complementary':['#1e3a5f','#cc7a3a'],
+  'triadic':['#a4402f','#1e3a5f','#c9a533'],
+  'monochrome':['#1c3f3a','#2b5c56','#5fa89e'],
+  'neutral-base':['#1b1a17','#8a8478','#e7dfcf'],
+};
+function renderRules(){
+  const colorCards=AMELIA_KB.color.map(r=>`
+    <div class="rule-card">
+      <h4>${r.name}</h4>
+      <p>${r.desc}</p>
+      <div class="wheel-demo">${(COLOR_SWATCH_DEMOS[r.id]||[]).map(c=>`<span style="background:${c}"></span>`).join('')}</div>
+    </div>
+  `).join('');
+  const styleCards=AMELIA_KB.style.map(r=>`
+    <div class="rule-card">
+      <h4>${r.name}</h4>
+      <p>${r.desc}</p>
+    </div>
+  `).join('');
+  const pairRows=Object.keys(AMELIA_KB.pairings).map(base=>{
+    const partners=AMELIA_KB.pairings[base];
+    return `
+      <div class="pair-row">
+        <div class="pair-base"><span class="dot" style="background:${NAMED_COLORS[base]}"></span>${base}</div>
+        <div class="pair-partners">
+          ${partners.map(p=>`<div class="pair-chip"><span class="dot" style="background:${NAMED_COLORS[p]}"></span>${p}</div>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rulesArea').innerHTML=`
+    <p style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;opacity:0.55;margin:0 0 10px;">Color</p>
+    ${colorCards}
+    <p style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;opacity:0.55;margin:22px 0 10px;">Estilo</p>
+    ${styleCards}
+    <p style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;opacity:0.55;margin:22px 0 4px;">Tabla de pares de color</p>
+    <p class="section-sub" style="margin-bottom:12px;">Empieza por el color base y elige uno o dos acompañantes de su fila. Amelia usa esta tabla para dar puntos extra a combinaciones probadas.</p>
+    <div class="pair-table">${pairRows}</div>
+  `;
+}
+
+/* ---------- Init ---------- */
+(async function init(){
+  await openDB();
+  items=await dbAll();
+  renderCloset();
+  renderCombineSlots();
+})();
+
+/* ---------- Backup: export / import ---------- */
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  if(items.length===0){ alert('Tu armario está vacío, no hay nada que exportar todavía.'); return; }
+  const payload={app:'percha',exportedAt:new Date().toISOString(),items};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,10);
+  a.href=url; a.download=`percha-respaldo-${stamp}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importInput').click());
+document.getElementById('importInput').addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const payload=JSON.parse(ev.target.result);
+      const incoming=Array.isArray(payload)? payload : payload.items;
+      if(!Array.isArray(incoming)) throw new Error('formato inválido');
+      const merge=confirm(`El respaldo tiene ${incoming.length} prenda(s).\n\nAceptar = agregar a tu armario actual.\nCancelar = reemplazar todo tu armario actual con este respaldo.`);
+      if(!merge){
+        for(const it of items) await dbDelete(it.id);
+        items=[];
+      }
+      for(const it of incoming){
+        if(!it.id) it.id='it_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        await dbAdd(it);
+      }
+      items=await dbAll();
+      renderCloset(); renderCombineSlots();
+      alert('Respaldo restaurado.');
+    }catch(err){
+      alert('No se pudo leer ese archivo como respaldo de Percha.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+</script>
+</body>
+</html>
